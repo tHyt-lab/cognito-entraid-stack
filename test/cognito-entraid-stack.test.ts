@@ -1,17 +1,53 @@
-// import * as cdk from 'aws-cdk-lib';
-// import { Template } from 'aws-cdk-lib/assertions';
-// import * as CognitoEntraidStack from '../lib/cognito-entraid-stack-stack';
+import * as cdk from "aws-cdk-lib";
+import { CognitoEntraidStack } from "../lib/cognito-entraid-stack-stack";
+import { Template } from "aws-cdk-lib/assertions";
 
-// example test. To run these tests, uncomment this file along with the
-// example resource in lib/cognito-entraid-stack-stack.ts
-test('SQS Queue Created', () => {
-//   const app = new cdk.App();
-//     // WHEN
-//   const stack = new CognitoEntraidStack.CognitoEntraidStackStack(app, 'MyTestStack');
-//     // THEN
-//   const template = Template.fromStack(stack);
+const stackProps = {
+  aad: {
+    clientId: "test",
+    clientSecret: "test",
+    tenantId: "test",
+  },
+  signInCallbackUrl: ["http://localhost:3000"],
+  signOutCallbackUrl: ["http://localhost:3000"],
+};
 
-//   template.hasResourceProperties('AWS::SQS::Queue', {
-//     VisibilityTimeout: 300
-//   });
+test("Snapshot", () => {
+  const app = new cdk.App();
+
+  const stack = new CognitoEntraidStack(app, "MyTestStack", stackProps);
+
+  expect(stack).toMatchSnapshot();
+});
+
+test("UserPoolId", () => {
+  const app = new cdk.App();
+
+  const stack = new CognitoEntraidStack(app, "MyTestStack", stackProps);
+
+  const template = Template.fromStack(stack);
+
+  template.hasResourceProperties("AWS::Cognito::UserPool", {
+    UserPoolName: "entraid-userpool",
+  });
+});
+
+// Check if federation with EntraId is available for IdentityProvider
+test("EntraId settings", () => {
+  const app = new cdk.App();
+
+  const stack = new CognitoEntraidStack(app, "MyTestStack", stackProps);
+
+  const template = Template.fromStack(stack);
+
+  template.hasResourceProperties("AWS::Cognito::UserPoolIdentityProvider", {
+    ProviderName: "EntraId",
+    ProviderDetails: {
+      client_id: stackProps.aad.clientId,
+      client_secret: stackProps.aad.clientSecret,
+      attributes_request_method: "GET",
+      authorize_scopes: "openid profile email",
+      oidc_issuer: `https://login.microsoftonline.com/${stackProps.aad.tenantId}/v2.0`,
+    }
+  });
 });

@@ -1,0 +1,244 @@
+Resources:
+  UserPool6BA7E5F2:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_phone_number
+            Priority: 1
+          - Name: verified_email
+            Priority: 2
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      EmailVerificationMessage: The verification code to your new account is {####}
+      EmailVerificationSubject: Verify your new account
+      SmsVerificationMessage: The verification code to your new account is {####}
+      UserPoolName: entraid-userpool
+      VerificationMessageTemplate:
+        DefaultEmailOption: CONFIRM_WITH_CODE
+        EmailMessage: The verification code to your new account is {####}
+        EmailSubject: Verify your new account
+        SmsMessage: The verification code to your new account is {####}
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: CognitoEntraidStackStack/UserPool/Resource
+  UserPoolDomain5479B217:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: entraid
+      UserPoolId:
+        Ref: UserPool6BA7E5F2
+    Metadata:
+      aws:cdk:path: CognitoEntraidStackStack/UserPoolDomain/Resource
+  EntraId9B037D76:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Properties:
+      AttributeMapping:
+        email: email
+        given_name: given_name
+        family_name: family_name
+      ProviderDetails:
+        client_id: test
+        client_secret: test
+        authorize_scopes: openid profile email
+        attributes_request_method: GET
+        oidc_issuer: https://login.microsoftonline.com/test/v2.0
+      ProviderName: EntraId
+      ProviderType: OIDC
+      UserPoolId:
+        Ref: UserPool6BA7E5F2
+    Metadata:
+      aws:cdk:path: CognitoEntraidStackStack/EntraId/Resource
+  UserPoolClient2F5918F7:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      AllowedOAuthFlows:
+        - implicit
+        - code
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
+      CallbackURLs:
+        - http://localhost:3000
+        - http://localhost:8000
+        - http://localhost:8080
+      ClientName: entraid-userpool-client
+      GenerateSecret: false
+      LogoutURLs:
+        - http://localhost:3000
+        - http://localhost:8000
+        - http://localhost:8080
+      SupportedIdentityProviders:
+        - Ref: EntraId9B037D76
+      UserPoolId:
+        Ref: UserPool6BA7E5F2
+    Metadata:
+      aws:cdk:path: CognitoEntraidStackStack/UserPoolClient/Resource
+  IdentityPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties:
+      AllowUnauthenticatedIdentities: false
+      CognitoIdentityProviders:
+        - ClientId:
+            Ref: UserPoolClient2F5918F7
+          ProviderName:
+            Fn::GetAtt:
+              - UserPool6BA7E5F2
+              - ProviderName
+      IdentityPoolName: entraid-identitypool
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: CognitoEntraidStackStack/IdentityPool
+  IdentityPoolRoles:
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+    Properties:
+      IdentityPoolId:
+        Ref: IdentityPool
+      Roles:
+        authenticated: arn:aws:iam::aws:policy/AdministratorAccess
+    Metadata:
+      aws:cdk:path: CognitoEntraidStackStack/IdentityPoolRoles
+  CDKMetadata:
+    Type: AWS::CDK::Metadata
+    Properties:
+      Analytics: v2:deflate64:H4sIAAAAAAAA/11QzQ6CMAx+Fu8wkXjxaPDiSYLxbHCrWhir2Q/GEN7doYCLp379fpq2KVsla5YsyqeJuahjiRfWHW3J68hTZ043hZZYdzKgcyIZZVc14wnsqClRhdLITO1egLJoX7mmFgXoAwoe2v/1OZhJ9Epo/TFzaFwr7AuSsLX+jHvjyX6QD84+3CdYgCGnOQw4IyXQIqk+UiSAVWbZpgnb+JdUBjHWzs9sgBXf+gZNMBFxLwEAAA==
+    Metadata:
+      aws:cdk:path: CognitoEntraidStackStack/CDKMetadata/Default
+    Condition: CDKMetadataAvailable
+Outputs:
+  OutputUserPoolId:
+    Value:
+      Ref: UserPool6BA7E5F2
+  OutputUserPoolDomain:
+    Value:
+      Fn::Join:
+        - ""
+        - - https://
+          - Ref: UserPoolDomain5479B217
+          - .auth.
+          - Ref: AWS::Region
+          - .amazoncognito.com
+  OutputUserPoolClientId:
+    Value:
+      Ref: UserPoolClient2F5918F7
+  OutputIdentityPoolId:
+    Value:
+      Ref: IdentityPool
+  OutputIdentityPoolProviderName:
+    Value:
+      Fn::GetAtt:
+        - UserPool6BA7E5F2
+        - ProviderName
+  OutputIdentityPoolProviderUrl:
+    Value:
+      Fn::Join:
+        - ""
+        - - cognito-idp.
+          - Ref: AWS::Region
+          - .amazonaws.com/
+          - Ref: UserPool6BA7E5F2
+  OutputIdentityPoolProviderArn:
+    Value:
+      Fn::Join:
+        - ""
+        - - "arn:aws:cognito-idp:"
+          - Ref: AWS::Region
+          - ":"
+          - Ref: AWS::AccountId
+          - :userpool/
+          - Ref: UserPool6BA7E5F2
+Conditions:
+  CDKMetadataAvailable:
+    Fn::Or:
+      - Fn::Or:
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - af-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-east-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-northeast-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-northeast-2
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-southeast-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-southeast-2
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ca-central-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - cn-north-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - cn-northwest-1
+      - Fn::Or:
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-central-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-north-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-west-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-west-2
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-west-3
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - me-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - sa-east-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-east-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-east-2
+      - Fn::Or:
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-west-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-west-2
+Parameters:
+  BootstrapVersion:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /cdk-bootstrap/hnb659fds/version
+    Description: Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]
+Rules:
+  CheckBootstrapVersion:
+    Assertions:
+      - Assert:
+          Fn::Not:
+            - Fn::Contains:
+                - - "1"
+                  - "2"
+                  - "3"
+                  - "4"
+                  - "5"
+                - Ref: BootstrapVersion
+        AssertDescription: CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.
+

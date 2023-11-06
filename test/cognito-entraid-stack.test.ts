@@ -1,5 +1,5 @@
 import * as cdk from "aws-cdk-lib";
-import { CognitoEntraidStack } from "../lib/cognito-entraid-stack-stack";
+import { CognitoEntraidStack } from "../lib/cognito-entraid-stack";
 import { Template } from "aws-cdk-lib/assertions";
 
 const stackProps = {
